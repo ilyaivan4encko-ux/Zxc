@@ -1,0 +1,912 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>Индустриализация v4.0: Evolution</title>
+<style>
+:root{
+  --bg:#0b0e11;--surface:#15191d;--surface-2:#1e2328;
+  --muted:#6c7b8b;--text:#e6eef3;
+  --accent:#00d4ff;--accent-glow:rgba(0, 212, 255, 0.15);
+  --gold:#ffd700;--gold-glow:rgba(255, 215, 0, 0.1);
+  --success:#00e676;--danger:#ff5252;--prestige:#b388ff;
+  --font-main:'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none;}
+body{font-family:var(--font-main);background:var(--bg);color:var(--text);font-size:14px;overflow:hidden;height:100vh;display:flex;flex-direction:column;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--surface-2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+/* Layout */
+.app{display:grid;grid-template-rows:auto auto 1fr auto;height:100%;max-width:1400px;margin:0 auto;width:100%}
+.header{padding:12px 16px;background:var(--surface);border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo{font-size:20px;font-weight:800;display:flex;align-items:center;gap:8px;color:var(--accent)}
+.save-status{font-size:11px;color:var(--muted);transition:opacity .5s}
+
+/* Resources Bar */
+.res-bar{background:rgba(0,0,0,0.3);padding:10px 16px;display:flex;gap:20px;overflow-x:auto;align-items:center;border-bottom:1px solid rgba(255,255,255,0.03)}
+.res{display:flex;flex-direction:column;min-width:80px}
+.res-val{font-weight:700;font-size:16px;line-height:1.2}
+.res-name{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+.res.special{color:var(--gold)}
+.res.prestige{color:var(--prestige)}
+
+/* Navigation */
+.nav{padding:8px 16px;display:flex;gap:8px;overflow-x:auto;background:var(--bg)}
+.nav-btn{background:var(--surface);color:var(--muted);border:1px solid rgba(255,255,255,0.05);padding:8px 16px;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all .2s;font-weight:600}
+.nav-btn:hover{background:var(--surface-2);color:var(--text)}
+.nav-btn.active{background:var(--accent-glow);color:var(--accent);border-color:rgba(0,212,255,0.3)}
+.nav-btn.prestige-mode{background:rgba(179,136,255,0.1);color:var(--prestige);border-color:rgba(179,136,255,0.3)}
+
+/* Main Content Area */
+.main-area{overflow:hidden;position:relative;background:radial-gradient(circle at 50% 50%, #13161a 0%, #0b0e11 100%)}
+.view{display:none;height:100%;overflow-y:auto;padding:16px;padding-bottom:80px}
+.view.active{display:block;animation:fadeIn 0.3s ease}
+
+/* Grid Layouts */
+.dashboard{display:grid;grid-template-columns:320px 1fr;gap:16px;height:100%;overflow:hidden}
+.sidebar{display:flex;flex-direction:column;gap:12px;overflow-y:auto;padding-right:4px}
+.content-col{display:flex;flex-direction:column;gap:12px;overflow-y:auto;padding-right:4px}
+
+@media(max-width:800px){ .dashboard{grid-template-columns:1fr;} }
+
+/* Cards & Panels */
+.panel{background:var(--surface);border:1px solid rgba(255,255,255,0.05);border-radius:12px;padding:16px;position:relative}
+.panel-head{display:flex;justify-content:space-between;margin-bottom:12px;align-items:center}
+.panel-title{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+
+/* Progress Bars */
+.progress-wrap{height:8px;background:rgba(0,0,0,0.3);border-radius:4px;overflow:hidden;margin:8px 0}
+.progress-bar{height:100%;width:0%;transition:width 0.2s linear}
+.p-farm{background:linear-gradient(90deg,#4caf50,#8bc34a)}
+.p-craft{background:linear-gradient(90deg,#ff9800,#ffc107)}
+
+/* Buttons */
+.btn{border:none;border-radius:6px;padding:10px 16px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:filter .2s, transform .1s}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:0.5;filter:grayscale(1);cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg, #00c2d6, #0288d1);color:#fff;box-shadow:0 4px 12px rgba(0,194,214,0.3)}
+.btn-success{background:linear-gradient(135deg, #43a047, #2e7d32);color:#fff}
+.btn-danger{background:#d32f2f;color:#fff}
+.btn-prestige{background:linear-gradient(135deg, #7c4dff, #651fff);color:#fff;box-shadow:0 0 15px rgba(124,77,255,0.4)}
+.btn-small{padding:4px 8px;font-size:12px}
+
+/* Upgrade Lists */
+.upgrade-list{display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:10px}
+.card-item{background:var(--surface-2);border:1px solid rgba(255,255,255,0.03);border-radius:8px;padding:10px;display:flex;gap:12px;transition:background .2s}
+.card-item:hover{background:#232930}
+.card-icon{width:48px;height:48px;background:rgba(255,255,255,0.05);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px}
+.card-info{flex:1;min-width:0}
+.card-name{font-weight:700;font-size:13px;margin-bottom:2px}
+.card-desc{font-size:11px;color:var(--muted);line-height:1.3}
+.card-buy{margin-top:8px;display:flex;justify-content:space-between;align-items:center}
+.cost{font-size:12px;font-weight:700;color:#ffd700}
+
+/* Research Tree */
+.tree-container{position:relative;width:100%;height:100%;overflow:auto;background:#050607;border-radius:12px;cursor:grab}
+.tree-container:active{cursor:grabbing}
+.tree-canvas{position:absolute;top:0;left:0;min-width:2000px;min-height:1000px;padding:50px}
+.node{position:absolute;width:160px;padding:10px;background:#1a2126;border:2px solid #333;border-radius:8px;z-index:2;cursor:pointer;transition:all .3s}
+.node:hover{transform:scale(1.05);border-color:var(--accent)}
+.node.unlocked{border-color:var(--success);background:#0f2215;color:#fff}
+.node.bought{border-color:var(--accent);background:#0d2530;box-shadow:0 0 15px rgba(0,212,255,0.2)}
+.node.locked{opacity:0.5;filter:grayscale(1)}
+.node-title{font-weight:700;font-size:12px;text-align:center;margin-bottom:4px}
+.node-cost{font-size:11px;color:var(--gold);text-align:center}
+svg.connections{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none}
+
+/* Notifications */
+.toasts{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:999;pointer-events:none}
+.toast{background:rgba(21,25,29,0.95);border-left:4px solid var(--accent);color:#fff;padding:12px 16px;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.5);opacity:0;transform:translateX(50px);transition:all .3s}
+.toast.show{opacity:1;transform:translateX(0)}
+
+/* Animations */
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.pulse{animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(0,212,255,0.4)}70%{box-shadow:0 0 0 10px rgba(0,212,255,0)}100%{box-shadow:0 0 0 0 rgba(0,212,255,0)}}
+
+/* Achievements & Managers */
+.ach-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));gap:10px}
+.ach-item{background:var(--surface);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);opacity:0.5}
+.ach-item.unlocked{opacity:1;border-color:var(--gold);background:rgba(255,215,0,0.05)}
+
+.manager-row{display:flex;align-items:center;gap:12px;background:var(--surface-2);padding:8px;border-radius:8px;margin-bottom:8px}
+.toggle-switch{position:relative;width:40px;height:20px;background:#333;border-radius:10px;cursor:pointer}
+.toggle-switch.on{background:var(--success)}
+.toggle-switch::after{content:'';position:absolute;left:2px;top:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left .2s}
+.toggle-switch.on::after{left:22px}
+
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="logo">🏭 <span>INDUSTRY <small style="font-size:12px;color:var(--muted)">EVOLUTION</small></span></div>
+    <div style="display:flex;gap:12px;align-items:center">
+      <span id="save-msg" class="save-status">Сохранено</span>
+      <button class="btn btn-small" onclick="Game.save(true)">💾 Save</button>
+      <button class="btn btn-small" onclick="UI.toggleSettings()">⚙️ Меню</button>
+    </div>
+  </div>
+
+  <div class="res-bar">
+    <div class="res special">
+      <div class="res-val" id="res-gold">0</div>
+      <div class="res-name">Золото</div>
+    </div>
+    <div class="res">
+      <div class="res-val" id="res-harvest">0</div>
+      <div class="res-name">Урожай</div>
+    </div>
+    <div class="res">
+      <div class="res-val" id="res-ore">0</div>
+      <div class="res-name">Руда</div>
+    </div>
+    <div class="res">
+      <div class="res-val" id="res-tools">0</div>
+      <div class="res-name">Детали</div>
+    </div>
+    <div class="res prestige" id="prestige-res" style="display:none;border-left:1px solid #333;padding-left:16px">
+      <div class="res-val" id="res-ep">0</div>
+      <div class="res-name">Очки Эволюции</div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn active" onclick="UI.tab('game')">🏠 Производство</button>
+    <button class="nav-btn" onclick="UI.tab('upgrades')">⚡ Улучшения</button>
+    <button class="nav-btn" onclick="UI.tab('research')">🔬 Наука</button>
+    <button class="nav-btn" onclick="UI.tab('shop')">🛒 Магазин</button>
+    <button class="nav-btn" onclick="UI.tab('achievements')">🏆 Достижения</button>
+    <button class="nav-btn prestige-mode" onclick="UI.tab('prestige')" id="btn-prestige-tab" style="display:none">🌌 Эволюция</button>
+  </div>
+
+  <div class="main-area">
+    <div id="game" class="view active dashboard">
+      <div class="sidebar">
+        <div class="panel">
+          <div class="panel-head">
+             <div class="panel-title">🌾 Ферма <small id="lvl-farm" style="color:var(--muted);margin-left:5px">Lvl 1</small></div>
+             <div class="small" style="font-size:11px" id="rate-farm">0/c</div>
+          </div>
+          <div class="progress-wrap"><div id="prog-farm" class="progress-bar p-farm"></div></div>
+          <div style="display:flex;gap:8px">
+             <button class="btn btn-success" style="flex:1" id="btn-plant" onclick="Game.plant()">🌱 Сажать (50)</button>
+             <button class="btn" style="flex:1" id="btn-harvest" disabled onclick="Game.harvest()">✂️ Собрать</button>
+          </div>
+        </div>
+
+        <div class="panel">
+           <div class="panel-head">
+             <div class="panel-title">⛏️ Шахта <small id="lvl-mine" style="color:var(--muted);margin-left:5px">Lvl 1</small></div>
+             <div class="small" style="font-size:11px" id="rate-mine">Click Power: 1</div>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="Game.mine()">⛏️ Копать</button>
+        </div>
+
+        <div class="panel">
+           <div class="panel-head">
+             <div class="panel-title">🛠️ Мастерская <small id="lvl-craft" style="color:var(--muted);margin-left:5px">Lvl 1</small></div>
+             <div class="small" style="font-size:11px" id="rate-craft">0.1/c</div>
+          </div>
+           <div class="progress-wrap"><div id="prog-craft" class="progress-bar p-craft"></div></div>
+           <button class="btn" style="width:100%" id="btn-craft" onclick="Game.manualCraft()">🔨 Создать (5 руды)</button>
+        </div>
+        
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">💰 Рынок</div></div>
+          <button class="btn btn-success" style="width:100%" onclick="Game.sellAll()">Продать всё</button>
+        </div>
+      </div>
+
+      <div class="content-col">
+         <div class="panel">
+           <h3>📜 Лог событий</h3>
+           <div id="gamelog" style="height:150px;overflow:hidden;font-size:12px;color:var(--muted);margin-top:8px;display:flex;flex-direction:column-reverse"></div>
+         </div>
+         <div class="panel">
+            <h3>📊 Статистика</h3>
+            <div id="stats-panel" style="font-size:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"></div>
+         </div>
+      </div>
+    </div>
+
+    <div id="upgrades" class="view">
+      <div class="panel" style="margin-bottom:16px">
+         <h3>Доступные улучшения</h3>
+         <div style="font-size:12px;color:var(--muted)">Покупайте улучшения, чтобы повысить эффективность.</div>
+      </div>
+      <div id="upgrades-container" class="upgrade-list"></div>
+    </div>
+
+    <div id="research" class="view" style="padding:0;overflow:hidden">
+      <div id="tree-area" class="tree-container">
+        <div id="tree-canvas" class="tree-canvas">
+          <svg id="svg-lines" class="connections"></svg>
+          <div id="tree-nodes"></div>
+        </div>
+      </div>
+      <div style="position:absolute;bottom:20px;left:20px;background:rgba(0,0,0,0.7);padding:8px;border-radius:8px;pointer-events:none">
+        Перетаскивайте карту • Изучайте технологии
+      </div>
+    </div>
+
+    <div id="shop" class="view">
+       <div class="dashboard">
+         <div class="panel">
+            <h3>🤖 Автоматизация (Менеджеры)</h3>
+            <div id="managers-list" style="margin-top:12px"></div>
+         </div>
+         <div class="panel">
+            <h3>💎 Особые товары</h3>
+            <div class="upgrade-list" id="shop-items">
+               </div>
+         </div>
+       </div>
+    </div>
+
+    <div id="achievements" class="view">
+      <div class="panel">
+        <h3>🏆 Достижения (<span id="ach-count">0</span>/20)</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Каждое достижение увеличивает глобальный доход на 5%.</p>
+        <div id="ach-list" class="ach-grid"></div>
+      </div>
+    </div>
+
+    <div id="prestige" class="view">
+       <div style="max-width:600px;margin:0 auto;text-align:center;padding-top:40px">
+          <div style="font-size:60px">🌌</div>
+          <h2 style="font-size:32px;margin:16px 0;color:var(--prestige)">Квантовый Сдвиг</h2>
+          <p style="color:var(--muted);margin-bottom:24px">Сбросьте весь прогресс (кроме достижений и магазина престижа) в обмен на Очки Эволюции (EP). EP увеличивают всё производство.</p>
+          
+          <div class="panel" style="margin-bottom:24px;border-color:var(--prestige)">
+             <div style="font-size:18px">Текущий бонус: <span id="ep-bonus" style="color:var(--success)">0%</span></div>
+             <div style="font-size:14px;color:var(--muted)">1 EP = +10% к производству</div>
+          </div>
+
+          <div class="panel" style="margin-bottom:24px">
+             <div style="font-size:14px">Вы получите при сбросе:</div>
+             <div style="font-size:40px;font-weight:800;color:var(--prestige);margin:10px 0" id="pending-ep">0</div>
+             <div style="font-size:12px;color:var(--muted)">Требуется минимум 1 EP для сброса</div>
+          </div>
+
+          <button id="btn-do-prestige" class="btn btn-prestige" style="font-size:18px;padding:16px 32px" onclick="Game.prestige()">СБРОСИТЬ МИР</button>
+       </div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+</div>
+
+<div id="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1000;align-items:center;justify-content:center">
+  <div class="panel" style="width:400px;max-width:90%">
+    <h3>Настройки</h3>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:20px">
+      <button class="btn" onclick="Game.exportSave()">📋 Экспорт сохранения (Copy)</button>
+      <button class="btn" onclick="Game.importSave()">📥 Импорт сохранения</button>
+      <div style="height:1px;background:rgba(255,255,255,0.1)"></div>
+      <button class="btn btn-danger" onclick="Game.hardReset()">☢️ ПОЛНЫЙ СБРОС (Wipe)</button>
+      <button class="btn" onclick="document.getElementById('modal-overlay').style.display='none'">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/**
+ * INDUSTRIALIZATION v4.0 - Core Engine
+ */
+
+// --- UTILS ---
+const fmt = (n) => {
+  if (n < 1000) return Math.floor(n);
+  const k = 1000, sizes = ['', 'k', 'M', 'B', 'T', 'Qa', 'Qi'];
+  const i = Math.floor(Math.log(n) / Math.log(k));
+  return parseFloat((n / Math.pow(k, i)).toFixed(2)) + sizes[i];
+};
+const el = (id) => document.getElementById(id);
+const create = (tag, cls) => { const e = document.createElement(tag); if(cls) e.className=cls; return e; };
+
+// --- CONFIG & DATA ---
+const DATA = {
+  eras: [
+    {id:'stone', name:'Каменный век', icon:'🪨', mult:1},
+    {id:'bronze', name:'Бронзовый век', icon:'⚔️', mult:2},
+    {id:'iron', name:'Железный век', icon:'🛡️', mult:4},
+    {id:'steam', name:'Эра пара', icon:'🚂', mult:8},
+    {id:'electric', name:'Электричество', icon:'⚡', mult:16},
+    {id:'cyber', name:'Киберпанк', icon:'🤖', mult:50},
+    {id:'singularity', name:'Сингулярность', icon:'🌌', mult:200}
+  ],
+  research: [
+    {id:'fire', name:'Огонь', cost:100, desc:'Открывает путь к знаниям', x:50, y:200, req:[]},
+    {id:'tools', name:'Инструменты', cost:250, desc:'Эффективность клика x2', x:200, y:150, req:['fire']},
+    {id:'agri', name:'Земледелие', cost:300, desc:'Открывает фермерство', x:200, y:250, req:['fire']},
+    {id:'wheel', name:'Колесо', cost:1000, desc:'Глобальная скорость +20%', x:350, y:200, req:['tools','agri']},
+    {id:'mining', name:'Шахтерство', cost:2000, desc:'Открывает улучшенные буры', x:500, y:100, req:['wheel']},
+    {id:'bronze', name:'Бронза', cost:5000, desc:'Переход в Бронзовый век (Доход x2)', x:500, y:200, req:['wheel']},
+    {id:'irrigation', name:'Ирригация', cost:4000, desc:'Ферма растет на 50% быстрее', x:500, y:300, req:['agri']},
+    {id:'iron', name:'Железо', cost:25000, desc:'Переход в Железный век', x:700, y:200, req:['bronze']},
+    {id:'automation', name:'Базовая автоматика', cost:50000, desc:'Позволяет покупать менеджеров', x:850, y:100, req:['iron']},
+    {id:'steam', name:'Паровой двигатель', cost:150000, desc:'Эра пара. Буст всего х2', x:900, y:250, req:['iron']},
+    {id:'electricity', name:'Электричество', cost:1000000, desc:'Эра электричества. Фермы автоматизируются', x:1100, y:200, req:['steam','automation']},
+    {id:'ai', name:'ИИ', cost:50000000, desc:'Менеджеры работают в 2 раза быстрее', x:1300, y:200, req:['electricity']}
+  ],
+  achievements: [
+    {id:'g1', name:'Начало', desc:'Заработать 1k золота', check: s => s.totalGold >= 1000},
+    {id:'g2', name:'Богач', desc:'Заработать 1M золота', check: s => s.totalGold >= 1000000},
+    {id:'g3', name:'Магнат', desc:'Заработать 1B золота', check: s => s.totalGold >= 1000000000},
+    {id:'m1', name:'Шахтер', desc:'Добыть 500 руды', check: s => s.stats.oreMined >= 500},
+    {id:'c1', name:'Мастер', desc:'Создать 100 деталей', check: s => s.stats.crafted >= 100},
+    {id:'t1', name:'Ученый', desc:'Изучить 5 технологий', check: s => Object.keys(s.research).length >= 5},
+    {id:'p1', name:'Новая жизнь', desc:'Совершить престиж', check: s => s.prestigeCount > 0}
+  ]
+};
+
+// --- STATE MANAGEMENT ---
+const DEFAULT_STATE = {
+  gold: 0,
+  totalGold: 0,
+  resources: { harvest:0, ore:0, tools:0, ep:0 },
+  stats: { oreMined:0, crafted:0, clicks:0, playtime:0 },
+  upgrades: { farm:1, mine:1, craft:1 }, // Levels
+  boughtUpgrades: {}, // Dictionary of IDs
+  research: {}, // Dictionary of IDs: true
+  managers: { farm:false, mine:false, craft:false },
+  managerSettings: { farm:true, mine:true, craft:true }, // toggles
+  farm: { planted:false, progress:0 },
+  craft: { progress:0 },
+  lastTick: Date.now(),
+  prestigeCount: 0,
+  startTime: Date.now()
+};
+
+let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+let generatedUpgrades = []; // Will hold our procedurally generated upgrade list
+
+// --- CORE GAME CLASS ---
+const Game = {
+  init() {
+    this.generateContent();
+    this.load();
+    UI.init();
+    this.loop();
+    setInterval(() => this.save(), 30000); // Autosave 30s
+    this.checkAchievements();
+  },
+
+  generateContent() {
+    // Dynamically create upgrades for levels 1-100
+    generatedUpgrades = [];
+    const types = ['farm','mine','craft','global'];
+    for(let t of types) {
+      for(let i=1; i<=20; i++) {
+        let cost = Math.floor(100 * Math.pow(1.5, i));
+        if(t==='global') cost *= 5;
+        generatedUpgrades.push({
+          id: `${t}_${i}`,
+          type: t,
+          level: i,
+          name: `${this.getTypeName(t)} Upgrade mk.${i}`,
+          desc: `Улучшает эффективность ${this.getTypeName(t)}`,
+          cost: cost,
+          mult: (t==='global'? 1.1 : 1.25)
+        });
+      }
+    }
+  },
+
+  getTypeName(t) {
+    if(t==='farm') return 'Фермы';
+    if(t==='mine') return 'Шахты';
+    if(t==='craft') return 'Крафта';
+    if(t==='global') return 'Глобал';
+    return '';
+  },
+
+  // --- LOGIC ---
+  tick(dt) {
+    // Calc Global Multipliers
+    const prestigeMult = 1 + (state.resources.ep * 0.1);
+    const achMult = 1 + (this.countAchievements() * 0.05);
+    const globalMult = prestigeMult * achMult * this.getUpgradeMult('global');
+    
+    // Farm Logic
+    if(state.farm.planted) {
+       let speed = (20 + (state.upgrades.farm * 2)) * globalMult; // % per sec
+       if(state.research['irrigation']) speed *= 1.5;
+       state.farm.progress += speed * dt;
+       if(state.farm.progress >= 100) {
+         state.farm.progress = 100;
+         if(state.managers.farm && state.managerSettings.farm) this.harvest();
+       }
+    } else {
+       if(state.managers.farm && state.managerSettings.farm && state.gold >= 50) this.plant();
+    }
+
+    // Mine Logic (Manager)
+    if(state.managers.mine && state.managerSettings.mine) {
+       // Auto mine rate depends on level
+       const rate = 1 + (state.research['ai'] ? 1 : 0); 
+       if(Math.random() < rate * dt) this.mine(true);
+    }
+
+    // Craft Logic
+    // Crafting is automated via progress bar in this version if manager active
+    // OR if user clicks. But let's make craft semi-passive.
+    let craftSpeed = (5 + state.upgrades.craft) * globalMult;
+    state.craft.progress += craftSpeed * dt;
+    if(state.craft.progress >= 100) {
+       state.craft.progress = 0; // ready to craft
+       if(state.managers.craft && state.managerSettings.craft) this.manualCraft(true);
+    }
+
+    state.stats.playtime += dt;
+    this.checkAchievements();
+  },
+
+  getUpgradeMult(type) {
+    // Calculates multiplier based on bought generic upgrades
+    let mult = 1;
+    generatedUpgrades.forEach(u => {
+      if(u.type === type && state.boughtUpgrades[u.id]) mult *= u.mult;
+    });
+    return mult;
+  },
+
+  // --- ACTIONS ---
+  plant() {
+    if(state.farm.planted) return;
+    if(state.gold < 50) return;
+    state.gold -= 50;
+    state.farm.planted = true;
+    state.farm.progress = 0;
+    UI.update();
+  },
+
+  harvest() {
+    if(!state.farm.planted || state.farm.progress < 100) return;
+    const base = 100 + (state.upgrades.farm * 20);
+    const amount = Math.floor(base * (1 + state.resources.ep * 0.1));
+    state.resources.harvest += amount;
+    state.farm.planted = false;
+    state.farm.progress = 0;
+    this.log(`Собрано ${fmt(amount)} урожая`);
+    UI.flyText(`+${fmt(amount)} 🌾`, 'res-harvest');
+    UI.update();
+  },
+
+  mine(auto=false) {
+    const base = 1 + Math.floor(state.upgrades.mine * 0.5);
+    const clickPower = (state.research['tools'] ? 2 : 1);
+    const amount = Math.floor(base * clickPower * (1 + state.resources.ep * 0.1));
+    
+    state.resources.ore += amount;
+    state.stats.oreMined += amount;
+    if(!auto) {
+      state.stats.clicks++;
+      UI.flyText(`+${amount} ⛏️`, 'res-ore');
+    }
+    UI.update();
+  },
+
+  manualCraft(auto=false) {
+    if(state.resources.ore < 5) {
+      if(!auto) UI.toast('Недостаточно руды (5)', 'error');
+      return;
+    }
+    state.resources.ore -= 5;
+    const amount = 1 * (state.research['iron'] ? 2 : 1);
+    state.resources.tools += amount;
+    state.stats.crafted += amount;
+    if(!auto) UI.flyText(`+${amount} 🛠️`, 'res-tools');
+    UI.update();
+  },
+
+  sellAll() {
+    let gained = 0;
+    // Prices
+    const pHarvest = 2;
+    const pOre = 3;
+    const pTools = 15;
+
+    gained += state.resources.harvest * pHarvest;
+    gained += state.resources.ore * pOre;
+    gained += state.resources.tools * pTools;
+
+    if(gained === 0) return;
+
+    state.resources.harvest = 0;
+    state.resources.ore = 0;
+    state.resources.tools = 0;
+    
+    state.gold += gained;
+    state.totalGold += gained;
+    this.log(`Продано на ${fmt(gained)} золота`);
+    UI.update();
+  },
+
+  buyUpgrade(id) {
+    const u = generatedUpgrades.find(x => x.id === id);
+    if(!u) return;
+    if(state.gold >= u.cost) {
+      state.gold -= u.cost;
+      state.boughtUpgrades[id] = true;
+      // Also increment base level tracker for UI
+      state.upgrades[u.type] = Math.max(state.upgrades[u.type], u.level + 1);
+      UI.toast(`Куплено: ${u.name}`);
+      UI.renderUpgrades();
+      UI.update();
+    } else {
+      UI.toast('Недостаточно золота', 'error');
+    }
+  },
+
+  buyResearch(id) {
+    const r = DATA.research.find(x => x.id === id);
+    if(!r) return;
+    if(state.research[id]) return;
+    
+    // Check reqs
+    const locked = r.req.some(reqId => !state.research[reqId]);
+    if(locked) { UI.toast('Сначала изучите предыдущие технологии', 'error'); return; }
+
+    if(state.gold >= r.cost) {
+      state.gold -= r.cost;
+      state.research[id] = true;
+      UI.toast(`Открыто: ${r.name}`);
+      UI.renderResearch();
+      UI.update();
+      // Unlock Prestige?
+      if(Object.keys(state.research).length >= 5) el('btn-prestige-tab').style.display='block';
+    } else {
+      UI.toast('Не хватает золота', 'error');
+    }
+  },
+
+  buyManager(type, cost) {
+    if(state.managers[type]) return;
+    if(state.gold >= cost) {
+      state.gold -= cost;
+      state.managers[type] = true;
+      UI.renderShop();
+      UI.update();
+    } else UI.toast('Не хватает денег');
+  },
+
+  toggleManager(type) {
+    state.managerSettings[type] = !state.managerSettings[type];
+    UI.renderShop();
+  },
+
+  // --- PRESTIGE ---
+  prestige() {
+    const pending = Math.floor(Math.sqrt(state.totalGold / 1000000));
+    if(pending < 1) { UI.toast('Нужно больше заработать для сброса', 'error'); return; }
+    
+    if(!confirm(`Вы уверены? Вы потеряете ресурсы и улучшения, но получите ${pending} EP.`)) return;
+
+    // Reset logic
+    const keepEP = state.resources.ep + pending;
+    const keepAch = state.prestigeCount + 1;
+    const keepStart = state.startTime;
+    
+    state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    state.resources.ep = keepEP;
+    state.prestigeCount = keepAch;
+    state.startTime = keepStart;
+    
+    this.save();
+    location.reload();
+  },
+
+  // --- SYSTEM ---
+  checkAchievements() {
+    let newUnlock = false;
+    DATA.achievements.forEach(a => {
+      // Logic handled in render mostly, but could trigger toast here
+    });
+  },
+  
+  countAchievements() {
+    return DATA.achievements.filter(a => a.check(state)).length;
+  },
+
+  log(msg) {
+    const d = el('gamelog');
+    const line = create('div');
+    line.innerHTML = `<span style="color:var(--accent)">[${new Date().toLocaleTimeString()}]</span> ${msg}`;
+    d.prepend(line);
+    if(d.children.length > 20) d.lastChild.remove();
+  },
+
+  save(notify=false) {
+    localStorage.setItem('inds_save_v4', JSON.stringify(state));
+    if(notify) {
+       const msg = el('save-msg');
+       msg.style.opacity = 1;
+       setTimeout(()=>msg.style.opacity=0, 2000);
+    }
+  },
+
+  load() {
+    const s = localStorage.getItem('inds_save_v4');
+    if(s) {
+      try {
+        const saved = JSON.parse(s);
+        // Merge recursive just in case structure changed, simplistic here
+        state = {...DEFAULT_STATE, ...saved, resources:{...DEFAULT_STATE.resources, ...saved.resources}, upgrades:{...DEFAULT_STATE.upgrades, ...saved.upgrades}};
+        this.log('Игра загружена.');
+      } catch(e) { console.error('Corrupt save'); }
+    }
+  },
+
+  hardReset() {
+    if(confirm('УДАЛИТЬ ВСЁ? Это действие необратимо.')) {
+      localStorage.removeItem('inds_save_v4');
+      location.reload();
+    }
+  },
+  
+  exportSave() {
+     const str = btoa(JSON.stringify(state));
+     navigator.clipboard.writeText(str).then(()=>UI.toast('Сохранение скопировано в буфер'));
+  },
+  
+  importSave() {
+     const str = prompt('Вставьте код сохранения:');
+     if(str) {
+       try{
+         localStorage.setItem('inds_save_v4', atob(str));
+         location.reload();
+       } catch(e){ UI.toast('Ошибка формата', 'error'); }
+     }
+  },
+
+  loop() {
+    let lastTime = performance.now();
+    const step = (time) => {
+      const dt = (time - lastTime) / 1000;
+      lastTime = time;
+      this.tick(dt);
+      UI.updateFast(); // Only numbers
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+};
+
+// --- UI ---
+const UI = {
+  init() {
+    this.renderUpgrades();
+    this.renderResearch();
+    this.renderShop();
+    this.renderAchievements();
+    
+    // Setup draggable research
+    const tree = el('tree-container');
+    const canvas = el('tree-canvas');
+    let isDown = false, startX, startY, scrollLeft, scrollTop;
+    tree.addEventListener('mousedown', (e) => {
+      isDown = true; startX = e.pageX - tree.offsetLeft; startY = e.pageY - tree.offsetTop;
+      scrollLeft = tree.scrollLeft; scrollTop = tree.scrollTop;
+    });
+    tree.addEventListener('mouseleave', () => { isDown = false; });
+    tree.addEventListener('mouseup', () => { isDown = false; });
+    tree.addEventListener('mousemove', (e) => {
+      if(!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - tree.offsetLeft;
+      const y = e.pageY - tree.offsetTop;
+      const walkX = (x - startX) * 1.5;
+      const walkY = (y - startY) * 1.5;
+      tree.scrollLeft = scrollLeft - walkX;
+      tree.scrollTop = scrollTop - walkY;
+    });
+    
+    // Initial prestige check
+    if(state.resources.ep > 0) el('prestige-res').style.display = 'block';
+  },
+
+  tab(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    el(name).classList.add('active');
+    // Find button
+    // Simplified logic for demo
+    if(name==='research') setTimeout(()=>this.drawLines(), 50);
+  },
+
+  toggleSettings() {
+    const m = el('modal-overlay');
+    m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+  },
+
+  update() {
+     // Triggered on events (buy, click)
+     this.renderResearch(); // refresh state
+     this.renderAchievements();
+     this.renderShop(); // toggle switches state
+  },
+
+  updateFast() {
+    // Resources
+    el('res-gold').innerText = fmt(state.gold);
+    el('res-harvest').innerText = fmt(state.resources.harvest);
+    el('res-ore').innerText = fmt(state.resources.ore);
+    el('res-tools').innerText = fmt(state.resources.tools);
+    el('res-ep').innerText = fmt(state.resources.ep);
+
+    // Bars
+    el('prog-farm').style.width = state.farm.progress + '%';
+    el('prog-craft').style.width = Math.min(100, state.craft.progress) + '%';
+    el('btn-harvest').disabled = !(state.farm.planted && state.farm.progress >= 100);
+    el('btn-plant').disabled = state.farm.planted || state.gold < 50;
+    
+    // Stats
+    el('lvl-farm').innerText = `Lvl ${state.upgrades.farm}`;
+    el('lvl-mine').innerText = `Lvl ${state.upgrades.mine}`;
+    el('lvl-craft').innerText = `Lvl ${state.upgrades.craft}`;
+    
+    // Prestige calc
+    const pending = Math.floor(Math.sqrt(state.totalGold / 1000000));
+    el('pending-ep').innerText = pending;
+    el('ep-bonus').innerText = (state.resources.ep * 10) + '%';
+  },
+
+  renderUpgrades() {
+    const c = el('upgrades-container');
+    c.innerHTML = '';
+    generatedUpgrades.forEach(u => {
+      // Don't show if bought
+      if(state.boughtUpgrades[u.id]) return;
+      // Show only if within reasonable range (level check)
+      if(u.level > state.upgrades[u.type] + 2) return;
+
+      const card = create('div', 'card-item');
+      card.innerHTML = `
+        <div class="card-icon">${u.type==='farm'?'🌾':u.type==='mine'?'⛏️':u.type==='craft'?'🛠️':'🌍'}</div>
+        <div class="card-info">
+           <div class="card-name">${u.name}</div>
+           <div class="card-desc">${u.desc}</div>
+           <div class="card-buy">
+              <span class="cost">${fmt(u.cost)} G</span>
+              <button class="btn btn-small btn-primary">Купить</button>
+           </div>
+        </div>
+      `;
+      card.querySelector('button').onclick = () => Game.buyUpgrade(u.id);
+      c.appendChild(card);
+    });
+    if(c.innerHTML === '') c.innerHTML = '<div style="padding:20px;color:var(--muted)">Все текущие улучшения куплены!</div>';
+  },
+
+  renderResearch() {
+    const container = el('tree-nodes');
+    container.innerHTML = ''; // Rebuild (could be optimized but fine for 20 nodes)
+    
+    DATA.research.forEach(r => {
+      const isBought = state.research[r.id];
+      const isUnlocked = r.req.every(req => state.research[req]);
+      
+      const n = create('div', `node ${isBought?'bought':''} ${!isUnlocked?'locked':''} ${isUnlocked && !isBought ? 'unlocked':''}`);
+      n.id = `node-${r.id}`;
+      n.style.left = r.x + 'px';
+      n.style.top = r.y + 'px';
+      n.innerHTML = `
+        <div class="node-title">${r.name}</div>
+        ${isBought ? '✅' : `<div class="node-cost">${fmt(r.cost)}</div>`}
+      `;
+      n.onclick = () => Game.buyResearch(r.id);
+      container.appendChild(n);
+    });
+    this.drawLines();
+  },
+
+  drawLines() {
+    const svg = el('svg-lines');
+    svg.innerHTML = '';
+    DATA.research.forEach(r => {
+      r.req.forEach(reqId => {
+        const from = DATA.research.find(x => x.id === reqId);
+        if(from) {
+          // simple coords
+          const x1 = from.x + 80; // center width
+          const y1 = from.y + 40; // center height
+          const x2 = r.x + 80;
+          const y2 = r.y + 40;
+          
+          const path = create('path'); // Namespace needed strictly speaking but HTML5 handles it often
+          path.setAttributeNS(null, 'd', `M ${x1} ${y1} L ${x2} ${y2}`);
+          path.setAttributeNS(null, 'stroke', state.research[reqId] ? '#00c2d6' : '#333');
+          path.setAttributeNS(null, 'stroke-width', '2');
+          svg.appendChild(path);
+        }
+      });
+    });
+    // Hack for namespace in dynamic creation if needed
+    svg.innerHTML = svg.innerHTML; 
+  },
+
+  renderShop() {
+    const c = el('managers-list');
+    c.innerHTML = '';
+    
+    const mans = [
+      {id:'farm', name:'Авто-Фермер', cost:1000, icon:'👨‍🌾'},
+      {id:'mine', name:'Авто-Бурильщик', cost:2500, icon:'👷'},
+      {id:'craft', name:'Авто-Сборщик', cost:5000, icon:'🤖'}
+    ];
+
+    if(!state.research['automation']) {
+      c.innerHTML = '<div style="padding:10px;color:var(--muted)">Требуется технология: Базовая автоматика</div>';
+      return;
+    }
+
+    mans.forEach(m => {
+       const bought = state.managers[m.id];
+       const row = create('div', 'manager-row');
+       if(!bought) {
+         row.innerHTML = `
+           <div style="font-size:20px">${m.icon}</div>
+           <div style="flex:1;font-weight:700">${m.name}</div>
+           <button class="btn btn-small btn-success" onclick="Game.buyManager('${m.id}', ${m.cost})">${m.cost} G</button>
+         `;
+       } else {
+         const active = state.managerSettings[m.id];
+         row.innerHTML = `
+           <div style="font-size:20px">${m.icon}</div>
+           <div style="flex:1;font-weight:700">${m.name} <span style="color:#4caf50">(Куплено)</span></div>
+           <div class="toggle-switch ${active?'on':''}" onclick="Game.toggleManager('${m.id}')"></div>
+         `;
+       }
+       c.appendChild(row);
+    });
+  },
+
+  renderAchievements() {
+    const c = el('ach-list');
+    c.innerHTML = '';
+    el('ach-count').innerText = Game.countAchievements();
+    
+    DATA.achievements.forEach(a => {
+       const unlocked = a.check(state);
+       const div = create('div', `ach-item ${unlocked?'unlocked':''}`);
+       div.innerHTML = `
+         <div style="font-weight:700">${unlocked?'🏆': '🔒'} ${a.name}</div>
+         <div style="font-size:11px;margin-top:4px">${a.desc}</div>
+       `;
+       c.appendChild(div);
+    });
+  },
+
+  toast(msg, type='info') {
+    const t = create('div', 'toast');
+    t.innerText = msg;
+    if(type==='error') t.style.borderLeftColor = 'var(--danger)';
+    el('toasts').appendChild(t);
+    // Trigger reflow
+    setTimeout(() => t.classList.add('show'), 10);
+    setTimeout(() => {
+       t.classList.remove('show');
+       setTimeout(() => t.remove(), 300);
+    }, 3000);
+  },
+
+  flyText(txt, targetId) {
+    // A simplified visual feedback, optional but nice
+  }
+};
+
+// Start
+window.onload = () => Game.init();
+
+</script>
+</body>
+</html>
